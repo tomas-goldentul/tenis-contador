@@ -1,9 +1,11 @@
-import { useRouter } from "expo-router";
-import { FlatList, Text, View } from "react-native";
+import { Redirect, useRouter } from "expo-router";
+import { FlatList, Pressable, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { BigButton } from "../src/components/BigButton";
 import { MatchCard } from "../src/components/MatchCard";
+import { isSupabaseConfigured } from "../src/api/supabaseClient";
 import { useDrillSessions } from "../src/hooks/useDrills";
+import { useAuthSession, useLogout } from "../src/hooks/useAuth";
 import { useMatches } from "../src/hooks/useMatches";
 import { useNetwork } from "../src/hooks/useNetwork";
 
@@ -12,6 +14,13 @@ export default function HomeScreen() {
   const matches = useMatches();
   const drills = useDrillSessions();
   const isOnline = useNetwork();
+  const { session, ready } = useAuthSession();
+  const logout = useLogout();
+
+  const authenticated = !isSupabaseConfigured() || Boolean(session);
+  if (isSupabaseConfigured() && ready && !session) {
+    return <Redirect href="/login" />;
+  }
 
   const activeDrills = (drills.data ?? []).filter((d) => !d.finishedAt).length;
 
@@ -74,6 +83,11 @@ sublabel={
         <Text className="text-white/50 text-xs">
           Datos guardados localmente · Sync automático al recuperar conexión
         </Text>
+        {authenticated && isSupabaseConfigured() && (isOnline || session) && (
+          <Pressable onPress={() => logout.mutate()} className="mt-2 px-4 py-1">
+            <Text className="text-court-red text-xs font-bold">Cerrar sesión</Text>
+          </Pressable>
+        )}
       </View>
     </SafeAreaView>
   );
